@@ -5,6 +5,7 @@ Release:    2
 Group:      System/Libraries
 License:    Apache License, Version 2.0
 Source0:    %{name}-%{version}.tar.gz
+Source1001: packaging/app-svc.manifest 
 
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
@@ -39,6 +40,7 @@ App svc (developement files)
 
 
 %build
+cp %{SOURCE1001} .
 
 CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" cmake . -DCMAKE_INSTALL_PREFIX=/usr
 
@@ -64,6 +66,7 @@ chmod 664 /opt/dbspace/.appsvc.db-journal
 %postun -p /sbin/ldconfig
 
 %files
+%manifest app-svc.manifest
 %defattr(-,root,root,-)
 /opt/share/appsvc_db.sql
 /usr/bin/appsvc_test
@@ -71,6 +74,7 @@ chmod 664 /opt/dbspace/.appsvc.db-journal
 /usr/lib/libappsvc.so.0.1.0
 
 %files devel
+%manifest app-svc.manifest
 %defattr(-,root,root,-)
 /usr/lib/pkgconfig/appsvc.pc
 /usr/lib/libappsvc.so
