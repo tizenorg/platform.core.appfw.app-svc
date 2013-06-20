@@ -1,0 +1,9 @@
+Change-Id: Idacf97109b61695b66058844b7ccc7848af7d665
+Code-Review+2: Anas Nashif <anas.nashif@intel.com>
+Code-Review+1: José Bollo <jobol@nonadev.net>
+Verified+1: José Bollo <jobol@nonadev.net>
+Submitted-by: Anas Nashif <anas.nashif@intel.com>
+Submitted-at: Thu, 20 Jun 2013 08:41:08 -0700
+Reviewed-on: https://review.tizen.org/gerrit/4155
+Project: platform/core/appfw/app-svc
+Branch: refs/heads/tizen
