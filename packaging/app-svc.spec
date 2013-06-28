@@ -5,6 +5,7 @@ Release:    1
 Group:      Application Framework/Service
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
+Source1001: 	app-svc.manifest
 
 Requires(post): /sbin/ldconfig
 Requires(post): sqlite3
@@ -37,6 +38,7 @@ Requires:   %{name} = %{version}-%{release}
 
 %prep
 %setup -q
+cp %{SOURCE1001} .
 
 
 %build
@@ -63,6 +65,7 @@ chsmack -a 'app-svc::db' /opt/dbspace/.appsvc.db-journal
 %postun -p /sbin/ldconfig
 
 %files
+%manifest %{name}.manifest
 %license LICENSE
 %manifest app-svc.manifest
 %defattr(-,root,root,-)
@@ -72,6 +75,7 @@ chsmack -a 'app-svc::db' /opt/dbspace/.appsvc.db-journal
 %{_libdir}/libappsvc.so.0.1.0
 
 %files devel
+%manifest %{name}.manifest
 %defattr(-,root,root,-)
 %{_libdir}/pkgconfig/appsvc.pc
 %{_libdir}/libappsvc.so
