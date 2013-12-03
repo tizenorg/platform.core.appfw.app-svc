@@ -1,6 +1,12 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 
+IF ( ENABLE_WAYLAND )
+	SET(BUILD_FOR_WAYLAND 1)
+ELSE ()
+        SET(BUILD_FOR_WAYLAND 0)
+ENDIF ()
+
 PROJECT(appsvc C)
 SET(VERSION_MAJOR 0)
 SET(VERSION "${VERSION_MAJOR}.1.0")
@@ -22,8 +28,13 @@ MESSAGE("Build type: ${CMAKE_BUILD_TYPE}")
 # Set required packages
 INCLUDE(FindPkgConfig)
 
+IF ( ENABLE_WAYLAND )
+pkg_check_modules(pkgs REQUIRED dlog ecore libprivilege-control aul)
+pkg_check_modules(libpkgs REQUIRED dlog bundle dbus-glib-1 ail xdgmime aul glib-2.0 ecore libsoup-2.4 iniparser pkgmgr-info)
+ELSE ()
 pkg_check_modules(pkgs REQUIRED dlog ecore x11 libprivilege-control aul)
 pkg_check_modules(libpkgs REQUIRED dlog bundle dbus-glib-1 ail xdgmime aul glib-2.0 ecore-x ecore libsoup-2.4 iniparser pkgmgr-info)
+ENDIF ()
 
 FIND_LIBRARY(LIB_DL dl)
 
@@ -34,6 +45,9 @@ ENDFOREACH(flag)
 FOREACH(flag ${pkgs_CFLAGS})
 	SET(TEST_CFLAGS "${TEST_CFLAGS} ${flag}")
 ENDFOREACH(flag)
+
+SET(APPCORE_CONFIG "appsvc-config")
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/include/${APPCORE_CONFIG}.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/${APPCORE_CONFIG}.h @ONLY)
 
 # Compiler flags
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
