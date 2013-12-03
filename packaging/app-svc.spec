@@ -1,3 +1,5 @@
+%bcond_without x
+
 Name:	    app-svc
 Summary:    Application Service
 Version: 0.1.53
@@ -12,8 +14,11 @@ Requires(postun): /sbin/ldconfig
 BuildRequires: cmake
 BuildRequires: sqlite3
 BuildRequires: pkgconfig(dlog)
-BuildRequires: pkgconfig(ecore) 
+BuildRequires: pkgconfig(ecore)
+%if !%{without x}
 BuildRequires: pkgconfig(x11)
+%endif
+
 BuildRequires: pkgconfig(libprivilege-control)
 BuildRequires: pkgconfig(bundle)
 BuildRequires: pkgconfig(dbus-glib-1)
@@ -41,8 +46,14 @@ Requires:   %{name} = %{version}-%{release}
 cp %{SOURCE1001} .
 
 
+%if %{without x}
 %build
-%cmake .
+%cmake . -DENABLE_WAYLAND=TRUE
+%else
+%build
+%cmake . -DENABLE_WAYLAND=FALSE
+%endif
+
 make %{?jobs:-j%jobs}
 
 %install

@@ -28,7 +28,14 @@
 #include <ail.h>
 #include <aul.h>
 #include <libsoup/soup.h>
+#include "appsvc-config.h"
+
+#ifdef WAYLAND_PLATFORM
+
+#else
 #include <Ecore_X.h>
+#endif
+
 #include <Ecore.h>
 #include <iniparser.h>
 #include <pkgmgr-info.h>
@@ -612,6 +619,9 @@ static int __get_list_with_submode(char *win_id, GSList **pkg_list)
 	ail_appinfo_h handle;
 	char *submode_mainid = NULL;
 
+#ifdef WAYLAND_PLATFORM
+
+#else
 	for (iter = *pkg_list; iter != NULL; ) {
 		find_item = NULL;
 		submode_mainid = NULL;
@@ -649,6 +659,7 @@ static int __get_list_with_submode(char *win_id, GSList **pkg_list)
 			iter = g_slist_next(iter);
 		}
 	}
+#endif
 
 	for (iter = *pkg_list; iter != NULL; iter = g_slist_next(iter)) {
 		appid = (char *)iter->data;
@@ -1049,12 +1060,21 @@ SLPAPI int appsvc_data_is_array(bundle *b, const char *key)
 
 typedef struct _appsvc_transient_cb_info_t{
 	appsvc_host_res_fn cb_func;
+
+#ifdef WAYLAND_PLATFORM
+
+#else
 	Ecore_X_Window win_id;
+#endif
+
 	void *data;
 }appsvc_transient_cb_info_t;
 
 static Eina_Bool __transient_cb(void *data, int type, void *event)
 {
+#ifdef WAYLAND_PLATFORM
+
+#else
 	Ecore_X_Event_Window_Hide *ev;
 	appsvc_transient_cb_info_t*  cb_info;
 
@@ -1065,7 +1085,7 @@ static Eina_Bool __transient_cb(void *data, int type, void *event)
 		cb_info->cb_func(cb_info->data);
 		ecore_main_loop_quit();
 	}
-
+#endif
 	return ECORE_CALLBACK_RENEW;
 }
 
@@ -1081,6 +1101,9 @@ int __aul_subapp_cb(void *data)
 	return 0;
 }
 
+#ifdef WAYLAND_PLATFORM
+
+#else
 SLPAPI int appsvc_allow_transient_app(bundle *b, Ecore_X_Window id)
 {
 	char win_id[MAX_LOCAL_BUFSZ];
@@ -1094,7 +1117,11 @@ SLPAPI int appsvc_allow_transient_app(bundle *b, Ecore_X_Window id)
 
 	return __set_bundle(b, APP_SVC_K_WIN_ID, win_id);
 }
+#endif
 
+#ifdef WAYLAND_PLATFORM
+
+#else
 SLPAPI int appsvc_request_transient_app(bundle *b, Ecore_X_Window callee_id, appsvc_host_res_fn cbfunc, void *data)
 {
 	char *caller = NULL;
@@ -1125,6 +1152,7 @@ SLPAPI int appsvc_request_transient_app(bundle *b, Ecore_X_Window callee_id, app
 
 	return 0;
 }
+#endif
 
 SLPAPI int appsvc_subapp_terminate_request_pid(int pid)
 {
