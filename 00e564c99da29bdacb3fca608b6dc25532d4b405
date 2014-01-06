@@ -1,0 +1,9 @@
+Code-Review+1: Juan Zhao
+Code-Review+2: Sunwook Bae <sunwook45.bae@samsung.com>
+Code-Review+1: wu <zhiwen.wu@linux.intel.com>
+Verified+1: li min <liminx.li@intel.com>
+Submitted-by: Sunwook Bae <sunwook45.bae@samsung.com>
+Submitted-at: Sun, 05 Jan 2014 20:05:53 -0800
+Reviewed-on: https://review.tizen.org/gerrit/13310
+Project: platform/core/appfw/app-svc
+Branch: refs/heads/tizen
