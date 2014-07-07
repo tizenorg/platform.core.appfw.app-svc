@@ -36,8 +36,6 @@ pkg_check_modules(pkgs REQUIRED ${APPSVC_PKGS_CHECK_MODULES})
 pkg_check_modules(libpkgs REQUIRED ${APPSVC_LIBPKGS_CHECK_MODULES})
 ENDIF (with_wayland)
 
-FIND_LIBRARY(LIB_DL dl)
-
 FOREACH(flag ${libpkgs_CFLAGS})
 	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
 ENDFOREACH(flag)
