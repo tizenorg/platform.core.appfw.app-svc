@@ -485,7 +485,7 @@ int appsvc_set_category(bundle *b, const char *category);
  * @endcode
  *
  */
-int appsvc_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc, void *data);
+int appsvc_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc, void *data, uid_t uid);
 
 /**
  * @par Description:
@@ -532,7 +532,7 @@ static int iter_fn(const char* pkg_name, void *data)
  * @endcode
  *
  */
-int appsvc_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data);
+int appsvc_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data, uid_t uid);
 
 /**
  * @par Description:
@@ -858,7 +858,7 @@ int appsvc_send_result(bundle *b, appsvc_result_val result);
  *
  */
 int appsvc_set_defapp(const char *op, const char *mime_type, const char *uri,
-				const char *defapp);
+				const char *defapp, uid_t uid);
 
 /**
  * @par Description:
@@ -885,7 +885,7 @@ int appsvc_set_defapp(const char *op, const char *mime_type, const char *uri,
  * @endcode
  *
  */
-int appsvc_unset_defapp(const char *defapp);
+int appsvc_unset_defapp(const char *defapp, uid_t uid);
 
 /**
  * @par Description:
@@ -917,7 +917,7 @@ int appsvc_unset_defapp(const char *defapp);
  *	None
 * 
 */
-int appsvc_is_defapp(const char *appid);
+int appsvc_is_defapp(const char *appid, uid_t uid);
 
 
 /**
