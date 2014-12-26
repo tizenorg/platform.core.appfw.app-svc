@@ -23,7 +23,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <errno.h>
 #include <glib.h>
+#include <grp.h>
+#include <pwd.h>
 #include <tzplatform_config.h>
 
 #include "appsvc_db.h"
@@ -35,34 +39,148 @@
 #define QUERY_MAX_LEN	8192
 #define URI_MAX_LEN	4096
 #define BUF_MAX_LEN	1024
+#define BUFSIZE 4096
+#define OWNER_ROOT 0
 
 #define APPSVC_COLLATION "appsvc_collation"
+
+#define QUERY_CREATE_TABLE_APPSVC "create table if not exists appsvc " \
+            "(operation text, " \
+            "mime_type text, " \
+            "uri text, " \
+            "pkg_name text, " \
+            "PRIMARY KEY(pkg_name)) "
 
 static sqlite3 *svc_db = NULL;
 static sqlite3 *app_info_db = NULL;
 
 
-static char* getUserSvcDB(void)
+static char* getUserSvcDB(uid_t uid)
 {
-       if(getuid())
-               return tzplatform_mkpath(TZ_USER_HOME, ".applications/dbspace/.appsvc.db");
-       else
-               return SVC_DB_PATH;
+	char *result = NULL;
+	char *journal = NULL;
+	struct group *grpinfo = NULL;
+	char * dir = NULL;
+	struct passwd *userinfo = getpwuid(uid);
+
+	if (uid == OWNER_ROOT) {
+		_E("FAIL : Root is not allowed user! please fix it replacing with DEFAULT_USER");
+		return NULL;
+	}
+	if (uid != tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)) {
+		if (userinfo == NULL) {
+			_E("getpwuid(%d) returns NULL !", uid);
+			return NULL;
+		}
+		grpinfo = getgrnam("users");
+		if (grpinfo == NULL) {
+			_E("getgrnam(users) returns NULL !");
+			return NULL;
+		}
+		// Compare git_t type and not group name
+		if (grpinfo->gr_gid != userinfo->pw_gid) {
+			_E("UID [%d] does not belong to 'users' group!", uid);
+			return NULL;
+		}
+		asprintf(&result, "%s/.applications/dbspace/.appsvc.db", userinfo->pw_dir);
+		asprintf(&journal, "%s/.applications/dbspace/.appsvc.db-journal", userinfo->pw_dir);
+	} else {
+		result = tzplatform_mkpath(TZ_SYS_DB, ".appsvc.db.db");
+		journal = tzplatform_mkpath(TZ_SYS_DB, ".appsvc.db-journal");
+	}
+	char *temp = strdup(result);
+	dir = strrchr(temp, '/');
+	if(!dir)
+	{
+		free(temp);
+		return result;
+	}
+	*dir = 0;
+
+	int ret = mkdir(temp, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
+	if (ret == -1 && errno != EEXIST) {
+			_E("FAIL : to create directory %s %d", temp, errno);
+	} else if (getuid() == 0) {
+		ret = chown(temp, uid, ((grpinfo)?grpinfo->gr_gid:0));
+		if (ret == -1) {
+			char buf[BUFSIZE];
+			strerror_r(errno, buf, sizeof(buf));
+			_E("FAIL : chown %s %d.%d, because %s", temp, uid, ((grpinfo)?grpinfo->gr_gid:0), buf);
+		}
+		}
+	free(temp);
+	return result;
 }
 
 
-static char* getUserAppDB(void)
+static char* getUserAppDB(uid_t uid)
 {
-       if(getuid())
-               return tzplatform_mkpath(TZ_USER_HOME, ".applications/dbspace/.app_info.db");
-       else
-               return APP_INFO_DB_PATH;
-}
+	char *result = NULL;
+	char *journal = NULL;
+	struct group *grpinfo = NULL;
+	char * dir = NULL;
+	struct passwd *userinfo = getpwuid(uid);
 
+	if (uid == OWNER_ROOT) {
+		_E("FAIL : Root is not allowed user! please fix it replacing with DEFAULT_USER");
+		return NULL;
+	}
+	if (uid != tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)) {
+		if (userinfo == NULL) {
+			_E("getpwuid(%d) returns NULL !", uid);
+			return NULL;
+		}
+		grpinfo = getgrnam("users");
+		if (grpinfo == NULL) {
+			_E("getgrnam(users) returns NULL !");
+			return NULL;
+		}
+		// Compare git_t type and not group name
+		if (grpinfo->gr_gid != userinfo->pw_gid) {
+			_E("UID [%d] does not belong to 'users' group!", uid);
+			return NULL;
+		}
+		asprintf(&result, "%s/.applications/dbspace/.app_info.db", userinfo->pw_dir);
+		asprintf(&journal, "%s/.applications/dbspace/.app_info.db-journal", userinfo->pw_dir);
+	} else {
+		result = tzplatform_mkpath(TZ_SYS_DB, ".app_info.db");
+		journal = tzplatform_mkpath(TZ_SYS_DB, ".app_info.db-journal");
+	}
+	char *temp = strdup(result);
+	dir = strrchr(temp, '/');
+	if(!dir)
+	{
+		free(temp);
+		return result;
+	}
+	*dir = 0;
+
+	int ret = mkdir(temp, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
+	if (ret == -1 && errno != EEXIST) {
+			_E("FAIL : to create directory %s %d", temp, errno);
+	} else if (getuid() == 0) {
+		ret = chown(temp, uid, ((grpinfo)?grpinfo->gr_gid:0));
+		if (ret == -1) {
+			char buf[BUFSIZE];
+			strerror_r(errno, buf, sizeof(buf));
+			_E("FAIL : chown %s %d.%d, because %s", temp, uid, ((grpinfo)?grpinfo->gr_gid:0), buf);
+		}
+		}
+	free(temp);
+	return result;
+
+
+
+  const char *appdb = getuid() != tzplatform_getuid(TZ_SYS_GLOBALAPP_USER) ?
+                          tzplatform_mkpath(TZ_USER_HOME, ".applications/dbspace/.app_info.db") :
+                          APP_INFO_DB_PATH;
+  _D("getuid : %d, appdb %s\n", getuid(), appdb);
+  return appdb;
+}
 /**
  * db initialize
  */
-static int __init(void)
+static int __init(uid_t uid)
 {
 	int rc;
 
@@ -71,7 +189,7 @@ static int __init(void)
 		return 0;
 	}
 
-	rc = sqlite3_open(getUserSvcDB(), &svc_db);
+	rc = sqlite3_open(getUserSvcDB(uid), &svc_db);
 	if(rc) {
 		_E("Can't open database: %s", sqlite3_errmsg(svc_db));
 		goto err;
@@ -81,6 +199,11 @@ static int __init(void)
 	rc = sqlite3_exec(svc_db, "PRAGMA journal_mode = PERSIST", NULL, NULL, NULL);
 	if(SQLITE_OK!=rc){
 		_D("Fail to change journal mode\n");
+		goto err;
+	}
+	rc = sqlite3_exec(svc_db, QUERY_CREATE_TABLE_APPSVC, NULL, NULL, NULL);
+	if(SQLITE_OK!=rc){
+		_D("Fail to create tables\n");
 		goto err;
 	}
 
@@ -157,7 +280,7 @@ static int __collate_appsvc(void *ucol, int str1_len, const void *str1, int str2
 	return -1;
 }
 
-static int __init_app_info_db(void)
+static int __init_app_info_db(uid_t uid)
 {
 	int rc;
 
@@ -166,7 +289,7 @@ static int __init_app_info_db(void)
 		return 0;
 	}
 
-	rc = sqlite3_open(getUserAppDB(), &app_info_db);
+	rc = sqlite3_open(getUserAppDB(uid), &app_info_db);
 	if(rc) {
 		_E("Can't open database: %s", sqlite3_errmsg(app_info_db));
 		goto err;
@@ -199,14 +322,14 @@ static int __fini(void)
 }
 
 
-int _svc_db_add_app(const char *op, const char *mime_type, const char *uri, const char *pkg_name)
+int _svc_db_add_app(const char *op, const char *mime_type, const char *uri, const char *pkg_name, uid_t uid)
 {
 	char m[BUF_MAX_LEN];
 	char u[URI_MAX_LEN];
 	char query[QUERY_MAX_LEN];
 	char* error_message = NULL;
 
-	if(__init()<0)
+	if(__init(uid)<0)
 		return -1;
 
 	if(op == NULL )
@@ -235,7 +358,7 @@ int _svc_db_add_app(const char *op, const char *mime_type, const char *uri, cons
 	return 0;
 }
 
-int _svc_db_delete_with_pkgname(const char *pkg_name)
+int _svc_db_delete_with_pkgname(const char *pkg_name, uid_t uid)
 {
 	char query[QUERY_MAX_LEN];
 	char* error_message = NULL;
@@ -245,7 +368,7 @@ int _svc_db_delete_with_pkgname(const char *pkg_name)
 		return -1;
 	}
 
-	if(__init()<0)
+	if(__init(uid)<0)
 		return -1;
 
 	snprintf(query, QUERY_MAX_LEN, "delete from appsvc where pkg_name = '%s';", pkg_name);
@@ -261,7 +384,7 @@ int _svc_db_delete_with_pkgname(const char *pkg_name)
 	return 0;
 }
 
-int _svc_db_is_defapp(const char *pkg_name)
+int _svc_db_is_defapp(const char *pkg_name, uid_t uid)
 {
 	char query[QUERY_MAX_LEN];
 	sqlite3_stmt *stmt;
@@ -273,7 +396,7 @@ int _svc_db_is_defapp(const char *pkg_name)
 		return 0;
 	}
 
-	if(__init()<0)
+	if(__init(uid)<0)
 		return 0;
 
 	snprintf(query, QUERY_MAX_LEN,
@@ -297,7 +420,7 @@ int _svc_db_is_defapp(const char *pkg_name)
 	return 1;
 }
 
-char* _svc_db_get_app(const char *op, const char *mime_type, const char *uri)
+char* _svc_db_get_app(const char *op, const char *mime_type, const char *uri, uid_t uid)
 {
 	char m[BUF_MAX_LEN];
 	char u[URI_MAX_LEN];
@@ -323,7 +446,7 @@ char* _svc_db_get_app(const char *op, const char *mime_type, const char *uri)
 //	if(doubt_sql_injection(mime_type))
 //		return NULL;
 
-	if(__init() < 0)
+	if(__init(uid) < 0)
 		return NULL;
 
 
@@ -365,7 +488,7 @@ db_fini :
 	return ret_val;
 }
 
-int _svc_db_get_list_with_collation(char *op, char *uri, char *mime, GSList **pkg_list)
+int _svc_db_get_list_with_collation(char *op, char *uri, char *mime, GSList **pkg_list, uid_t uid)
 {
 	char query[QUERY_MAX_LEN];
 	sqlite3_stmt* stmt;
@@ -375,7 +498,7 @@ int _svc_db_get_list_with_collation(char *op, char *uri, char *mime, GSList **pk
 	char *pkgname = NULL;
 	int found;
 
-	if(__init_app_info_db()<0)
+	if(__init_app_info_db(uid)<0)
 		return 0;
 
 	snprintf(query, QUERY_MAX_LEN, "select package from app_info where x_slp_svc='%s|%s|%s' collate appsvc_collation", op,uri,mime);

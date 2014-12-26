@@ -527,20 +527,20 @@ static int __get_list_with_condition_mime_extened(char *op, char *uri, char *mim
 }
 
 static int __get_list_with_condition_mime_extened_with_collation(char *op, char *uri, char *mime,
-	char *m_type, char *s_type, GSList **pkg_list)
+	char *m_type, char *s_type, GSList **pkg_list, uid_t uid)
 {
 	char *tmp;
 
 	tmp = malloc(MAX_MIME_STR_SIZE);
 
-	_svc_db_get_list_with_collation(op, uri, mime, pkg_list);
+	_svc_db_get_list_with_collation(op, uri, mime, pkg_list, uid);
 	if ((strncmp(mime, "NULL", 4) != 0) && (strncmp(s_type, "%", 1) != 0)) {
 		snprintf(tmp, MAX_MIME_STR_SIZE-1, "%s/*", m_type);
-		_svc_db_get_list_with_collation(op, uri, tmp, pkg_list);
+		_svc_db_get_list_with_collation(op, uri, tmp, pkg_list, uid);
 	}
 	if ((strncmp(mime, "NULL", 4) != 0) && (strncmp(m_type, "%", 1) != 0)) {
 		snprintf(tmp, MAX_MIME_STR_SIZE-1, "*/*");
-		_svc_db_get_list_with_collation(op, uri, tmp, pkg_list);
+		_svc_db_get_list_with_collation(op, uri, tmp, pkg_list, uid);
 	}
 	free(tmp);
 
@@ -664,7 +664,7 @@ static int __get_list_with_submode(char *win_id, GSList **pkg_list)
 	return 0;
 }
 
-SLPAPI int appsvc_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc, void *data)
+SLPAPI int appsvc_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc, void *data, uid_t uid)
 {
 	appsvc_resolve_info_t info;
 	char *pkgname;
@@ -698,10 +698,10 @@ SLPAPI int appsvc_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc,
 	_D("op - %s / mime - %s / shceme - %s\n", info.op, info.origin_mime, info.scheme);
 
 	/*uri*/
-	pkgname = _svc_db_get_app(info.op, info.origin_mime, info.uri);
+	pkgname = _svc_db_get_app(info.op, info.origin_mime, info.uri, uid);
 	if(pkgname==NULL){
 		__get_list_with_condition_mime_extened_with_collation(info.op, info.uri,
-				info.mime, info.m_type, info.s_type, &pkg_list);
+				info.mime, info.m_type, info.s_type, &pkg_list, uid);
 		pkg_count = g_slist_length(pkg_list);
 		if(pkg_count > 0) {
 
@@ -751,7 +751,7 @@ SLPAPI int appsvc_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc,
 
 	/*scheme & host*/
 	if(info.uri_r_info) {
-		pkgname = _svc_db_get_app(info.op, info.origin_mime, info.uri_r_info);
+		pkgname = _svc_db_get_app(info.op, info.origin_mime, info.uri_r_info, uid);
 
 		if(pkgname==NULL){
 			__get_list_with_condition_mime_extened(info.op, info.uri_r_info,
@@ -799,7 +799,7 @@ SLPAPI int appsvc_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc,
 	}
 
 	/*scheme*/
-	pkgname = _svc_db_get_app(info.op, info.origin_mime, info.scheme);
+	pkgname = _svc_db_get_app(info.op, info.origin_mime, info.scheme, uid);
 
 	if(pkgname==NULL){
 		__get_list_with_condition_mime_extened(info.op, info.scheme,
@@ -846,7 +846,7 @@ end:
 	return ret;
 }
 
-SLPAPI int appsvc_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data)
+SLPAPI int appsvc_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data, uid_t uid)
 {
 	appsvc_resolve_info_t info;
 	char *pkgname = NULL;
@@ -875,7 +875,7 @@ SLPAPI int appsvc_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data)
 	_D("operation - %s / shceme - %s / mime - %s\n", info.op, info.scheme, info.mime);
 
 	__get_list_with_condition_mime_extened_with_collation(info.op, info.uri,
-			info.mime, info.m_type, info.s_type, &pkg_list);
+			info.mime, info.m_type, info.s_type, &pkg_list, uid);
 
 	if(info.uri_r_info) {
 		__get_list_with_condition_mime_extened(info.op, info.uri_r_info, 
@@ -1005,14 +1005,14 @@ SLPAPI int appsvc_send_result(bundle *b, appsvc_result_val result)
 } 
 
 SLPAPI int appsvc_set_defapp(const char *op, const char *mime_type, const char *uri,
-					const char *defapp)
+					const char *defapp, uid_t uid)
 {
 	int ret;
 
 	if(op == NULL || defapp == NULL)
 		return APPSVC_RET_EINVAL;
 
-	ret = _svc_db_add_app(op, mime_type, uri, defapp);
+	ret = _svc_db_add_app(op, mime_type, uri, defapp, uid);
 
 	if(ret < 0)
 		return APPSVC_RET_ERROR;
@@ -1020,14 +1020,14 @@ SLPAPI int appsvc_set_defapp(const char *op, const char *mime_type, const char *
 	return APPSVC_RET_OK;
 }
 
-SLPAPI int appsvc_unset_defapp(const char *defapp)
+SLPAPI int appsvc_unset_defapp(const char *defapp, uid_t uid)
 {
 	int ret;
 
 	if(defapp == NULL)
 		return APPSVC_RET_EINVAL;
 
-	ret = _svc_db_delete_with_pkgname(defapp);
+	ret = _svc_db_delete_with_pkgname(defapp, uid);
 
 	if(ret < 0) 
 		return APPSVC_RET_ERROR;
@@ -1035,9 +1035,9 @@ SLPAPI int appsvc_unset_defapp(const char *defapp)
 	return APPSVC_RET_OK;
 }
 
-SLPAPI int appsvc_is_defapp(const char *pkg_name)
+SLPAPI int appsvc_is_defapp(const char *pkg_name, uid_t uid)
 {
-	return _svc_db_is_defapp(pkg_name);
+	return _svc_db_is_defapp(pkg_name, uid);
 }
 
 SLPAPI int appsvc_data_is_array(bundle *b, const char *key)
