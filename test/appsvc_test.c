@@ -131,7 +131,7 @@ int run_svc()
 
 	__set_bundle_from_args(kb);
 	
-	ret = appsvc_run_service(kb,0,NULL, NULL);
+	ret = appsvc_run_service(kb,0,NULL, NULL, getuid());
 	
 	if(ret >= 0){
 		printf("open service success\n");
@@ -218,7 +218,7 @@ int run_svc_res()
 	
 	__set_bundle_from_args(kb);	
 	
-	ret = appsvc_run_service(kb, 0, cb_func, (void*)num);
+	ret = appsvc_run_service(kb, 0, cb_func, (void*)num, getuid());
 	
 	if(ret >= 0){
 		printf("open service success\n");
