@@ -47,6 +47,7 @@
 
 
 #include <bundle.h>
+#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -485,7 +486,8 @@ int appsvc_set_category(bundle *b, const char *category);
  * @endcode
  *
  */
-int appsvc_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc, void *data, uid_t uid);
+int appsvc_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc, void *data);
+int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc, void *data, uid_t uid);
 
 /**
  * @par Description:
@@ -532,7 +534,8 @@ static int iter_fn(const char* pkg_name, void *data)
  * @endcode
  *
  */
-int appsvc_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data, uid_t uid);
+int appsvc_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data);
+int appsvc_usr_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data, uid_t uid);
 
 /**
  * @par Description:
@@ -918,7 +921,6 @@ int appsvc_unset_defapp(const char *defapp, uid_t uid);
 * 
 */
 int appsvc_is_defapp(const char *appid, uid_t uid);
-
 
 /**
  * @par Description:

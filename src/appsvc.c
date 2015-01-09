@@ -664,7 +664,15 @@ static int __get_list_with_submode(char *win_id, GSList **pkg_list)
 	return 0;
 }
 
-SLPAPI int appsvc_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc, void *data, uid_t uid)
+SLPAPI int appsvc_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc, void *data)
+{
+	//using default user to allow app-svc API usage  for deamon.
+	//App-svc run service leads to app launch that could require a graphical session.
+	//Indeed bluetooth_agent uses this API and is launched as bluetooth user (that not regular user).
+	return appsvc_usr_run_service(b, request_code, cbfunc, data, tzplatform_getuid(TZ_SYS_DEFAULT_USER));
+}
+
+SLPAPI int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc, void *data, uid_t uid)
 {
 	appsvc_resolve_info_t info;
 	char *pkgname;
@@ -846,7 +854,15 @@ end:
 	return ret;
 }
 
-SLPAPI int appsvc_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data, uid_t uid)
+
+SLPAPI int appsvc_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data)
+{
+	//using default user to allow app-svc API usage  for deamon.
+	//App-svc run get list leads to app launch that could require a graphical session.
+	return appsvc_usr_get_list(b, iter_fn, data, tzplatform_getuid(TZ_SYS_DEFAULT_USER));
+}
+
+SLPAPI int appsvc_usr_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data, uid_t uid)
 {
 	appsvc_resolve_info_t info;
 	char *pkgname = NULL;
