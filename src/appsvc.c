@@ -703,7 +703,7 @@ SLPAPI int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbf
 	if(ret < 0)
 		return ret;
 
-	_D("op - %s / mime - %s / shceme - %s\n", info.op, info.origin_mime, info.scheme);
+	_D("op - %s / mime - %s / scheme - %s\n", info.op, info.origin_mime, info.scheme);
 
 	/*uri*/
 	pkgname = _svc_db_get_app(info.op, info.origin_mime, info.uri, uid);
@@ -888,7 +888,7 @@ SLPAPI int appsvc_usr_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *dat
 	if(ret < 0)
 		return ret;
 	
-	_D("operation - %s / shceme - %s / mime - %s\n", info.op, info.scheme, info.mime);
+	_D("operation - %s / scheme - %s / mime - %s\n", info.op, info.scheme, info.mime);
 
 	__get_list_with_condition_mime_extened_with_collation(info.op, info.uri,
 			info.mime, info.m_type, info.s_type, &pkg_list, uid);
