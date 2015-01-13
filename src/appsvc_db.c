@@ -472,7 +472,7 @@ int _svc_db_get_list_with_collation(char *op, char *uri, char *mime, GSList **pk
 	if(__init_app_info_db(uid)<0)
 		return 0;
 
-	snprintf(query, QUERY_MAX_LEN, "select package from app_info where x_slp_svc='%s|%s|%s' collate appsvc_collation", op,uri,mime);
+	snprintf(query, QUERY_MAX_LEN, "select package from app_info where x_slp_svc like '%%%s|%s|%s%%'", op, uri ? uri : "NULL", mime);
 	_D("query : %s\n",query);
 
 	ret = sqlite3_prepare(app_info_db, query, strlen(query), &stmt, NULL);
