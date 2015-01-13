@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #include <glib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 #include <ail.h>
 #include <aul.h>
@@ -41,7 +43,6 @@
 #include "appsvc_db.h"
 #include "internal.h"
 #include "priv_key.h"
-
 
 
 
@@ -343,7 +344,7 @@ static ail_cb_ret_e __ail_iter_func(
 	char *str = NULL;
 	char *pkgname = NULL;
 
-	ail_appinfo_get_str(appinfo, AIL_PROP_PACKAGE_STR, &str);
+	ail_appinfo_get_usr_str(appinfo, AIL_PROP_PACKAGE_STR, getuid(), &str);
 
 	_D("Matching application is %s",str);
 
@@ -379,7 +380,8 @@ static int __get_list_with_condition(char *op, char *uri, char *mime, GSList **p
 		return APPSVC_RET_ERROR;
 	}
 
-	ail_filter_list_appinfo_foreach(filter, __ail_iter_func, (void *)pkg_list);
+	ail_filter_list_usr_appinfo_foreach(filter, __ail_iter_func, (void *)pkg_list,
+                                      getuid());
 
 	ail_filter_destroy(filter);
 
@@ -625,9 +627,9 @@ static int __get_list_with_submode(char *win_id, GSList **pkg_list)
 		find_item = NULL;
 		submode_mainid = NULL;
 		appid = (char *)iter->data;
-		ret = ail_get_appinfo(appid, &handle);
+		ret = ail_get_usr_appinfo(appid, getuid(), &handle);
 		SECURE_LOGD("ret %d, %s, %x", ret, appid, handle);
-		ret = ail_appinfo_get_str(handle, AIL_PROP_X_SLP_SUBMODEMAINID_STR, &submode_mainid);
+		ret = ail_appinfo_get_usr_str(handle, AIL_PROP_X_SLP_SUBMODEMAINID_STR, getuid(), &submode_mainid);
 		SECURE_LOGD("appid(%s) submode_mainid(%s) win_id(%s)", appid, submode_mainid, win_id);
 		if(submode_mainid) {
 			if(win_id) {
