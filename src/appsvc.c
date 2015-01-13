@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #include <glib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 #include <ail.h>
 #include <aul.h>
@@ -41,7 +43,6 @@
 #include "appsvc_db.h"
 #include "internal.h"
 #include "priv_key.h"
-
 
 
 
@@ -87,9 +88,9 @@ static int __run_svc_with_pkgname(char *pkgname, bundle *b, int request_code,
 static int __get_resolve_info(bundle *b, appsvc_resolve_info_t *info);
 static int __free_resolve_info_data(appsvc_resolve_info_t *info);
 static ail_cb_ret_e __ail_iter_func(const ail_appinfo_h appinfo,
-				    void *user_data);
+				    void *user_data, uid_t uid);
 static int __get_list_with_condition(char *op, char *uri,
-				     char *mime, GSList **pkg_list);
+				     char *mime, GSList **pkg_list, uid_t uid);
 
 
 static appsvc_cb_info_t *__create_rescb(int request_code, appsvc_res_fn cbfunc, void *data)
@@ -332,14 +333,14 @@ static int __free_resolve_info_data(appsvc_resolve_info_t *info)
 }
 
 static ail_cb_ret_e __ail_iter_func(
-			const ail_appinfo_h appinfo, void *user_data)
+		        const ail_appinfo_h appinfo, void *user_data, uid_t uid)
 {
 	GSList **pkg_list = (GSList **)user_data;
 	GSList *iter = NULL;
 	char *str = NULL;
 	char *pkgname = NULL;
 
-	ail_appinfo_get_str(appinfo, AIL_PROP_PACKAGE_STR, &str);
+	ail_appinfo_get_usr_str(appinfo, AIL_PROP_PACKAGE_STR, uid, &str);
 
 	_D("Matching application is %s",str);
 
@@ -356,7 +357,7 @@ static ail_cb_ret_e __ail_iter_func(
 	return AIL_CB_RET_CONTINUE;
 }
 
-static int __get_list_with_condition(char *op, char *uri, char *mime, GSList **pkg_list)
+static int __get_list_with_condition(char *op, char *uri, char *mime, GSList **pkg_list, uid_t uid)
 {
 	ail_filter_h filter;
 	ail_error_e ail_ret;
@@ -375,7 +376,7 @@ static int __get_list_with_condition(char *op, char *uri, char *mime, GSList **p
 		return APPSVC_RET_ERROR;
 	}
 
-	ail_filter_list_appinfo_foreach(filter, __ail_iter_func, (void *)pkg_list);
+	ail_filter_list_usr_appinfo_foreach(filter, __ail_iter_func, (void *)pkg_list, uid);
 
 	ail_filter_destroy(filter);
 
@@ -506,20 +507,20 @@ SLPAPI int appsvc_set_category(bundle *b, const char *category)
 }
 
 static int __get_list_with_condition_mime_extened(char *op, char *uri, char *mime,
-	char *m_type, char *s_type, GSList **pkg_list)
+       char *m_type, char *s_type, GSList **pkg_list, uid_t uid)
 {
 	char *tmp;
 
 	tmp = malloc(MAX_MIME_STR_SIZE);
 
-	__get_list_with_condition(op, uri, mime, pkg_list);
+	__get_list_with_condition(op, uri, mime, pkg_list, uid);
 	if ((strncmp(mime, "NULL", 4) != 0) && (strncmp(s_type, "%", 1) != 0)) {
 		snprintf(tmp, MAX_MIME_STR_SIZE-1, "%s/*", m_type);
-		__get_list_with_condition(op, uri, tmp, pkg_list);
+		__get_list_with_condition(op, uri, tmp, pkg_list, uid);
 	}
 	if ((strncmp(mime, "NULL", 4) != 0) && (strncmp(m_type, "%", 1) != 0)) {
 		snprintf(tmp, MAX_MIME_STR_SIZE-1, "*/*");
-		__get_list_with_condition(op, uri, tmp, pkg_list);
+		__get_list_with_condition(op, uri, tmp, pkg_list, uid);
 	}
 	free(tmp);
 
@@ -569,7 +570,7 @@ static int __app_list_cb(pkgmgrinfo_appinfo_h handle, void *user_data)
 	return 0;
 }
 
-static int __get_list_with_category(char *category, GSList **pkg_list)
+static int __get_list_with_category(char *category, GSList **pkg_list, uid_t uid)
 {
 	int ret;
 	pkgmgrinfo_appinfo_filter_h handle;
@@ -581,7 +582,7 @@ static int __get_list_with_category(char *category, GSList **pkg_list)
 	ret = pkgmgrinfo_appinfo_filter_add_string(handle, PMINFO_APPINFO_PROP_APP_CATEGORY, category);
 
 	tmp_list = *pkg_list;
-	ret = pkgmgrinfo_appinfo_filter_foreach_appinfo(handle, __app_list_cb, &app_list);
+	ret = pkgmgrinfo_appinfo_usr_filter_foreach_appinfo(handle, __app_list_cb, &app_list, uid);
 	if (ret != PMINFO_R_OK) {
 		pkgmgrinfo_appinfo_filter_destroy(handle);
 		return -1;
@@ -606,7 +607,7 @@ static int __appid_compare(gconstpointer data1, gconstpointer data2)
 	return strcmp(a,b);
 }
 
-static int __get_list_with_submode(char *win_id, GSList **pkg_list)
+static int __get_list_with_submode(char *win_id, GSList **pkg_list, uid_t uid)
 {
 	int ret;
 	GSList *iter = NULL;
@@ -621,9 +622,9 @@ static int __get_list_with_submode(char *win_id, GSList **pkg_list)
 		find_item = NULL;
 		submode_mainid = NULL;
 		appid = (char *)iter->data;
-		ret = ail_get_appinfo(appid, &handle);
+		ret = ail_get_usr_appinfo(appid, uid, &handle);
 		SECURE_LOGD("ret %d, %s, %x", ret, appid, handle);
-		ret = ail_appinfo_get_str(handle, AIL_PROP_X_SLP_SUBMODEMAINID_STR, &submode_mainid);
+		ret = ail_appinfo_get_usr_str(handle, AIL_PROP_X_SLP_SUBMODEMAINID_STR, uid, &submode_mainid);
 		SECURE_LOGD("appid(%s) submode_mainid(%s) win_id(%s)", appid, submode_mainid, win_id);
 		if(submode_mainid) {
 			if(win_id) {
@@ -715,20 +716,20 @@ SLPAPI int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbf
 
 			if(info.uri_r_info) {
 				__get_list_with_condition_mime_extened(info.op, info.uri_r_info,
-					info.mime, info.m_type, info.s_type, &pkg_list);
+					info.mime, info.m_type, info.s_type, &pkg_list, uid);
 			}
 
 			__get_list_with_condition_mime_extened(info.op, info.scheme,
-				info.mime, info.m_type, info.s_type, &pkg_list);
+				info.mime, info.m_type, info.s_type, &pkg_list, uid);
 
 			__get_list_with_condition_mime_extened(info.op, "*",
-				info.mime, info.m_type, info.s_type, &pkg_list);
+				info.mime, info.m_type, info.s_type, &pkg_list, uid);
 
 			if(info.category) {
-				__get_list_with_category(info.category, &pkg_list);
+				__get_list_with_category(info.category, &pkg_list, uid);
 			}
 
-			__get_list_with_submode(info.win_id, &pkg_list);
+			__get_list_with_submode(info.win_id, &pkg_list, uid);
 
 			pkg_count = g_slist_length(pkg_list);
 			_D("pkg_count : %d", pkg_count);
@@ -763,20 +764,20 @@ SLPAPI int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbf
 
 		if(pkgname==NULL){
 			__get_list_with_condition_mime_extened(info.op, info.uri_r_info,
-				info.mime, info.m_type, info.s_type, &pkg_list);
+				info.mime, info.m_type, info.s_type, &pkg_list, uid);
 			pkg_count = g_slist_length(pkg_list);
 			if(pkg_count > 0) {
 				__get_list_with_condition_mime_extened(info.op, info.scheme,
-					info.mime, info.m_type, info.s_type, &pkg_list);
+					info.mime, info.m_type, info.s_type, &pkg_list, uid);
 
 				__get_list_with_condition_mime_extened(info.op, "*",
-								info.mime, info.m_type, info.s_type, &pkg_list);
+					info.mime, info.m_type, info.s_type, &pkg_list, uid);
 
 				if(info.category) {
-					__get_list_with_category(info.category, &pkg_list);
+					__get_list_with_category(info.category, &pkg_list, uid);
 				}
 
-				__get_list_with_submode(info.win_id, &pkg_list);
+				__get_list_with_submode(info.win_id, &pkg_list, uid);
 
 				pkg_count = g_slist_length(pkg_list);
 				_D("pkg_count : %d", pkg_count);
@@ -811,16 +812,16 @@ SLPAPI int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbf
 
 	if(pkgname==NULL){
 		__get_list_with_condition_mime_extened(info.op, info.scheme,
-			info.mime, info.m_type, info.s_type, &pkg_list);
+			info.mime, info.m_type, info.s_type, &pkg_list, uid);
 
 		__get_list_with_condition_mime_extened(info.op, "*",
-								info.mime, info.m_type, info.s_type, &pkg_list);
+			info.mime, info.m_type, info.s_type, &pkg_list, uid);
 
 		if(info.category) {
-			__get_list_with_category(info.category, &pkg_list);
+			__get_list_with_category(info.category, &pkg_list, uid);
 		}
 
-		__get_list_with_submode(info.win_id, &pkg_list);
+		__get_list_with_submode(info.win_id, &pkg_list, uid);
 
 		pkg_count = g_slist_length(pkg_list);
 		_D("pkg_count : %d", pkg_count);
@@ -895,17 +896,17 @@ SLPAPI int appsvc_usr_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *dat
 
 	if(info.uri_r_info) {
 		__get_list_with_condition_mime_extened(info.op, info.uri_r_info, 
-			info.mime, info.m_type, info.s_type, &pkg_list);
+			info.mime, info.m_type, info.s_type, &pkg_list, uid);
 	}
 	
 	__get_list_with_condition_mime_extened(info.op, info.scheme, 
-		info.mime, info.m_type, info.s_type, &pkg_list);
+		info.mime, info.m_type, info.s_type, &pkg_list, uid);
 
 	if(info.category) {
-		__get_list_with_category(info.category, &pkg_list);
+		__get_list_with_category(info.category, &pkg_list, uid);
 	}
 
-	__get_list_with_submode(info.win_id, &pkg_list);
+	__get_list_with_submode(info.win_id, &pkg_list, uid);
 
 	pkg_count = g_slist_length(pkg_list);
 	if (pkg_count == 0) {
