@@ -104,7 +104,7 @@ static char* getUserSvcDB(uid_t uid)
 		tzplatform_set_user(uid);
 		appsvc_db = tzplatform_mkpath(TZ_USER_DB, ".appsvc.db");
 		db_path = tzplatform_getenv(TZ_USER_DB);
-		gid = tzplatform_getgid(TZ_SYS_USER_GROUP);
+		gid = tzplatform_getgid(TZ_USER_DB);
 		tzplatform_reset_user();
 	} else {
 		appsvc_db = tzplatform_mkpath(TZ_SYS_DB, ".appsvc.db");
@@ -135,7 +135,7 @@ static char* getUserAppDB(uid_t uid)
 		tzplatform_set_user(uid);
 		app_info_db = tzplatform_mkpath(TZ_USER_DB, ".app_info.db");
 		db_path = tzplatform_getenv(TZ_USER_DB);
-		gid = tzplatform_getgid(TZ_SYS_USER_GROUP);
+		gid = tzplatform_getgid(TZ_USER_DB);
 		tzplatform_reset_user();
 	} else {
 		app_info_db = tzplatform_mkpath(TZ_SYS_DB, ".app_info.db");
