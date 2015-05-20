@@ -32,7 +32,7 @@
 #include "internal.h"
 
 #define SVC_DB_PATH	tzplatform_mkpath(TZ_SYS_DB, ".appsvc.db")
-#define APP_INFO_DB_PATH	tzplatform_mkpath(TZ_SYS_DB, ".app_info.db")
+#define APP_INFO_DB_PATH	tzplatform_mkpath(TZ_SYS_DB, ".pkgmgr_parser.db")
 
 #define QUERY_MAX_LEN	8192
 #define URI_MAX_LEN	4096
@@ -133,12 +133,12 @@ static char* getUserAppDB(uid_t uid)
 
 	if (uid != tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)) {
 		tzplatform_set_user(uid);
-		app_info_db = tzplatform_mkpath(TZ_USER_DB, ".app_info.db");
+		app_info_db = tzplatform_mkpath(TZ_USER_DB, ".pkgmgr_parser.db");
 		db_path = tzplatform_getenv(TZ_USER_DB);
 		gid = tzplatform_getgid(TZ_USER_NAME);
 		tzplatform_reset_user();
 	} else {
-		app_info_db = tzplatform_mkpath(TZ_SYS_DB, ".app_info.db");
+		app_info_db = tzplatform_mkpath(TZ_SYS_DB, ".pkgmgr_parser.db");
 		db_path = tzplatform_getenv(TZ_SYS_DB);
 	}
 
@@ -160,7 +160,7 @@ static int __init(uid_t uid)
 		return 0;
 	}
 
-	rc = sqlite3_open(getUserSvcDB(uid), &svc_db);
+	rc = sqlite3_open_v2(getUserSvcDB(uid), &svc_db, SQLITE_OPEN_READONLY, NULL);
 	if(rc) {
 		_E("Can't open database: %s", sqlite3_errmsg(svc_db));
 		goto err;
@@ -260,7 +260,7 @@ static int __init_app_info_db(uid_t uid)
 		return 0;
 	}
 
-	rc = sqlite3_open(getUserAppDB(uid), &app_info_db);
+	rc = sqlite3_open_v2(getUserAppDB(uid), &app_info_db, SQLITE_OPEN_READONLY, NULL);
 	if(rc) {
 		_E("Can't open database: %s", sqlite3_errmsg(app_info_db));
 		goto err;
@@ -373,7 +373,7 @@ int _svc_db_is_defapp(const char *pkg_name, uid_t uid)
 	snprintf(query, QUERY_MAX_LEN,
 		"select count(*) from appsvc where pkg_name = '%s';", pkg_name);
 
-	ret = sqlite3_prepare(svc_db, query, sizeof(query), &stmt, NULL);
+	ret = sqlite3_prepare_v2(svc_db, query, sizeof(query), &stmt, NULL);
 	if (ret != SQLITE_OK) {
 		return -1;
 	}
@@ -426,7 +426,7 @@ char* _svc_db_get_app(const char *op, const char *mime_type, const char *uri, ui
 
 	_D("query : %s\n",query);
 
-	ret = sqlite3_prepare(svc_db, query, strlen(query), &stmt, NULL);
+	ret = sqlite3_prepare_v2(svc_db, query, strlen(query), &stmt, NULL);
 
 	if ( ret != SQLITE_OK) {
 		_E("prepare error(%d)\n", ret);
@@ -459,6 +459,51 @@ db_fini :
 	return ret_val;
 }
 
+int _svc_db_get_list_with_condition(char *op, char *uri, char *mime, GSList **pkg_list, uid_t uid)
+{
+	char query[QUERY_MAX_LEN];
+	sqlite3_stmt* stmt;
+	int ret;
+	GSList *iter = NULL;
+	char *str = NULL;
+	char *pkgname = NULL;
+	int found;
+
+	if(__init_app_info_db(uid)<0)
+		return 0;
+
+	snprintf(query, QUERY_MAX_LEN, "select ac.app_id from package_app_app_control as ac where ac.app_control like '%%%s|%s|%s%%'", op,uri,mime);
+	SECURE_LOGD("query : %s\n",query);
+
+	ret = sqlite3_prepare_v2(app_info_db, query, strlen(query), &stmt, NULL);
+	if ( ret != SQLITE_OK) {
+		_E("prepare error, ret = %d, extended = %d %s\n", ret,
+				sqlite3_extended_errcode(app_info_db), sqlite3_errmsg(app_info_db));
+		return -1;
+	}
+
+	while (sqlite3_step(stmt) == SQLITE_ROW) {
+		str = (char *)sqlite3_column_text(stmt, 0);
+		found = 0;
+		for (iter = *pkg_list; iter != NULL; iter = g_slist_next(iter)) {
+			pkgname = (char *)iter->data;
+			if (strncmp(str,pkgname, MAX_PACKAGE_STR_SIZE-1) == 0) {
+				found = 1;
+				break;
+			}
+		}
+		if(found == 0) {
+			pkgname = strdup(str);
+			*pkg_list = g_slist_append(*pkg_list, (void *)pkgname);
+			_D("%s is added",pkgname);
+		}
+	}
+
+	ret = sqlite3_finalize(stmt);
+
+	return 0;
+}
+
 int _svc_db_get_list_with_collation(char *op, char *uri, char *mime, GSList **pkg_list, uid_t uid)
 {
 	char query[QUERY_MAX_LEN];
@@ -472,13 +517,14 @@ int _svc_db_get_list_with_collation(char *op, char *uri, char *mime, GSList **pk
 	if(__init_app_info_db(uid)<0)
 		return 0;
 
-	snprintf(query, QUERY_MAX_LEN, "select package from app_info where x_slp_svc like '%%%s|%s|%s%%'", op, uri ? uri : "NULL", mime);
-	_D("query : %s\n",query);
+	snprintf(query, QUERY_MAX_LEN, "select ac.app_id from package_app_app_control as ac where ac.app_control='%s|%s|%s' collate appsvc_collation", op,uri,mime);
+	SECURE_LOGD("query : %s\n",query);
 
-	ret = sqlite3_prepare(app_info_db, query, strlen(query), &stmt, NULL);
+	ret = sqlite3_prepare_v2(app_info_db, query, strlen(query), &stmt, NULL);
 
 	if ( ret != SQLITE_OK) {
-		_E("prepare error\n");
+		_E("prepare error, ret = %d, extended = %d %s\n", ret,
+				sqlite3_extended_errcode(app_info_db), sqlite3_errmsg(app_info_db));
 		return -1;
 	}
 

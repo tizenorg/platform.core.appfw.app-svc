@@ -27,7 +27,6 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-#include <ail.h>
 #include <aul.h>
 #include <libsoup/soup.h>
 
@@ -38,6 +37,7 @@
 #include <Ecore.h>
 #include <iniparser.h>
 #include <pkgmgr-info.h>
+#include <tzplatform_config.h>
 
 #include "appsvc.h"
 #include "appsvc_db.h"
@@ -87,8 +87,6 @@ static int __run_svc_with_pkgname(char *pkgname, bundle *b, int request_code,
 				  appsvc_res_fn cbfunc, void *data);
 static int __get_resolve_info(bundle *b, appsvc_resolve_info_t *info);
 static int __free_resolve_info_data(appsvc_resolve_info_t *info);
-static ail_cb_ret_e __ail_iter_func(const ail_appinfo_h appinfo,
-				    void *user_data, uid_t uid);
 static int __get_list_with_condition(char *op, char *uri,
 				     char *mime, GSList **pkg_list, uid_t uid);
 
@@ -332,57 +330,6 @@ static int __free_resolve_info_data(appsvc_resolve_info_t *info)
 	return 0;
 }
 
-static ail_cb_ret_e __ail_iter_func(
-		        const ail_appinfo_h appinfo, void *user_data, uid_t uid)
-{
-	GSList **pkg_list = (GSList **)user_data;
-	GSList *iter = NULL;
-	char *str = NULL;
-	char *pkgname = NULL;
-
-	ail_appinfo_get_usr_str(appinfo, AIL_PROP_PACKAGE_STR, uid, &str);
-
-	_D("Matching application is %s",str);
-
-	for (iter = *pkg_list; iter != NULL; iter = g_slist_next(iter)) {
-		pkgname = (char *)iter->data;
-		if (strncmp(str, pkgname, MAX_PACKAGE_STR_SIZE-1) == 0)
-			return AIL_CB_RET_CONTINUE;
-	}
-
-	pkgname = strdup(str);
-	*pkg_list = g_slist_append(*pkg_list, (void *)pkgname);
-	_D("%s is added",pkgname);
-
-	return AIL_CB_RET_CONTINUE;
-}
-
-static int __get_list_with_condition(char *op, char *uri, char *mime, GSList **pkg_list, uid_t uid)
-{
-	ail_filter_h filter;
-	ail_error_e ail_ret;
-	char svc_filter[MAX_FILTER_STR_SIZE] = {0,};
-	
-	ail_ret = ail_filter_new(&filter);
-	if (ail_ret != AIL_ERROR_OK) 
-		return APPSVC_RET_ERROR;
-
-	snprintf(svc_filter, MAX_FILTER_STR_SIZE-1, "%s|%s|%s", op, uri, mime);
-	_D("svc_filter : %s",svc_filter);
-
-	ail_ret = ail_filter_add_str(filter, AIL_PROP_X_SLP_SVC_STR, svc_filter);
-	if (ail_ret != AIL_ERROR_OK) {
-		ail_filter_destroy(filter);
-		return APPSVC_RET_ERROR;
-	}
-
-	ail_filter_list_usr_appinfo_foreach(filter, __ail_iter_func, (void *)pkg_list, uid);
-
-	ail_filter_destroy(filter);
-
-	return APPSVC_RET_OK;
-}
-
 SLPAPI int appsvc_set_operation(bundle *b, const char *operation)
 {	
 	if(b == NULL){
@@ -513,14 +460,14 @@ static int __get_list_with_condition_mime_extened(char *op, char *uri, char *mim
 
 	tmp = malloc(MAX_MIME_STR_SIZE);
 
-	__get_list_with_condition(op, uri, mime, pkg_list, uid);
+	_svc_db_get_list_with_condition(op, uri, mime, pkg_list, uid);
 	if ((strncmp(mime, "NULL", 4) != 0) && (strncmp(s_type, "%", 1) != 0)) {
 		snprintf(tmp, MAX_MIME_STR_SIZE-1, "%s/*", m_type);
-		__get_list_with_condition(op, uri, tmp, pkg_list, uid);
+		_svc_db_get_list_with_condition(op, uri, tmp, pkg_list, uid);
 	}
 	if ((strncmp(mime, "NULL", 4) != 0) && (strncmp(m_type, "%", 1) != 0)) {
 		snprintf(tmp, MAX_MIME_STR_SIZE-1, "*/*");
-		__get_list_with_condition(op, uri, tmp, pkg_list, uid);
+		_svc_db_get_list_with_condition(op, uri, tmp, pkg_list, uid);
 	}
 	free(tmp);
 
@@ -614,7 +561,7 @@ static int __get_list_with_submode(char *win_id, GSList **pkg_list, uid_t uid)
 	char *appid = NULL;
 	GSList *find_item = NULL;
 	char *find_appid = NULL;
-	ail_appinfo_h handle;
+	pkgmgrinfo_appinfo_h handle = NULL;
 	char *submode_mainid = NULL;
 
 #ifndef WAYLAND
@@ -622,9 +569,9 @@ static int __get_list_with_submode(char *win_id, GSList **pkg_list, uid_t uid)
 		find_item = NULL;
 		submode_mainid = NULL;
 		appid = (char *)iter->data;
-		ret = ail_get_usr_appinfo(appid, uid, &handle);
+		ret = pkgmgrinfo_appinfo_get_usr_appinfo(appid, uid, &handle);
 		SECURE_LOGD("ret %d, %s, %x", ret, appid, handle);
-		ret = ail_appinfo_get_usr_str(handle, AIL_PROP_X_SLP_SUBMODEMAINID_STR, uid, &submode_mainid);
+		ret = pkgmgrinfo_appinfo_get_submode_mainid(handle, &submode_mainid);
 		SECURE_LOGD("appid(%s) submode_mainid(%s) win_id(%s)", appid, submode_mainid, win_id);
 		if(submode_mainid) {
 			if(win_id) {
@@ -650,7 +597,7 @@ static int __get_list_with_submode(char *win_id, GSList **pkg_list, uid_t uid)
 				}
 			}
 		}
-		ail_destroy_appinfo(handle);
+		pkgmgrinfo_appinfo_destroy_appinfo(handle);
 		if(!find_item) {
 			iter = g_slist_next(iter);
 		}
