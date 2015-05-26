@@ -88,6 +88,8 @@ extern "C" {
 #define APPSVC_OPERATION_FONT_TYPE		"http://tizen.org/appcontrol/operation/configure/font/type"
 /** APP_SVC OPERATION TYPE*/
 #define APPSVC_OPERATION_FONT_SIZE		"http://tizen.org/appcontrol/operation/configure/font/size"
+/** APP_SVC OPERATION TYPE*/
+#define APPSVC_OPERATION_LAUNCH_ON_EVENT       "http://tizen.org/appcontrol/operation/launch_on_event"
 
 
 
