@@ -39,6 +39,11 @@ Application Service
 Summary:    App svc
 Group:      Development/Application Framework
 Requires:   %{name} = %{version}-%{release}
+Requires:   pkgconfig(sqlite3)
+Requires:   pkgconfig(bundle)
+Requires:   pkgconfig(glib-2.0)
+Requires:   pkgconfig(xdgmime)
+Requires:   pkgconfig(aul)
 %description devel
 %devel_desc
 
