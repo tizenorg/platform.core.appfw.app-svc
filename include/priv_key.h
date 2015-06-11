@@ -42,6 +42,8 @@
 /** APP SVC internal private key */
 #define APP_SVC_K_WIN_ID	"__APP_SVC_K_WIN_ID__"
 
+/** APP SVC internal private key */
+#define APP_SVC_K_LAUNCH_MODE   "__APP_SVC_LAUNCH_MODE__"
 
 #endif		/* __PRIV_KEY_H__ */
 

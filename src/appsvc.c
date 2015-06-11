@@ -453,6 +453,15 @@ SLPAPI int appsvc_set_category(bundle *b, const char *category)
 	return __set_bundle(b, APP_SVC_K_CATEGORY, category);
 }
 
+SLPAPI int appsvc_set_launch_mode(bundle *b, const char *mode)
+{
+	if (b == NULL) {
+		_E("bundle for appsvc_set_launch_mode is NULL");
+		return APPSVC_RET_EINVAL;
+	}
+
+	return __set_bundle(b, APP_SVC_K_LAUNCH_MODE, mode);
+}
 static int __get_list_with_condition_mime_extened(char *op, char *uri, char *mime,
        char *m_type, char *s_type, GSList **pkg_list, uid_t uid)
 {
@@ -915,6 +924,11 @@ SLPAPI const char *appsvc_get_category(bundle *b)
 	return bundle_get_val(b, APP_SVC_K_CATEGORY);
 }
 
+SLPAPI const char *appsvc_get_launch_mode(bundle *b)
+{
+	return bundle_get_val(b, APP_SVC_K_LAUNCH_MODE);
+}
+
 SLPAPI int appsvc_create_result_bundle(bundle *inb, bundle **outb)
 {
 	int ret = -1;
@@ -1117,6 +1131,32 @@ SLPAPI int appsvc_request_transient_app(bundle *b, unsigned int callee_id, appsv
 
 SLPAPI int appsvc_subapp_terminate_request_pid(int pid)
 {
-	return aul_subapp_terminate_request_pid(pid);
-}
+	int cpid = getpid();
+	int lcnt;
+	int *lpids = NULL;
+	int i;
 
+	aul_app_group_get_leader_pids(&lcnt, &lpids);
+	for (i = 0; i < lcnt; i++) {
+		if (lpids[i] == cpid) {
+			int cnt;
+			int *pids = NULL;
+
+			aul_app_group_get_group_pids(cpid, &cnt, &pids);
+
+			if (cnt == 0) {
+				free(lpids);
+				return aul_subapp_terminate_request_pid(pid);
+			}
+
+			if (pids != NULL)
+				free(pids);
+			break;
+		}
+	}
+
+	if (lpids != NULL)
+		free(lpids);
+
+	return aul_app_group_clear_top();
+}
