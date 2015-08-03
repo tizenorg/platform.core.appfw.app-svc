@@ -1160,3 +1160,13 @@ SLPAPI int appsvc_subapp_terminate_request_pid(int pid)
 
 	return aul_app_group_clear_top();
 }
+
+SLPAPI int aul_svc_subscribe_launch_result(bundle *b, const char *result)
+{
+	if (b == NULL) {
+		_E("bundle for aul_svc_subscribe_launch_result is NULL");
+		return APPSVC_RET_EINVAL;
+	}
+
+	return __set_bundle(b, result, "1");
+}

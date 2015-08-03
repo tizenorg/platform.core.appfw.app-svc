@@ -123,6 +123,8 @@ extern "C" {
 
 #define APP_SELECTOR "org.tizen.app-selector"
 
+#define APPSVC_K_LAUNCH_RESULT_APP_STARTED "__K_LAUNCH_RESULT_APP_STARTED__"
+
 /**
  * @brief Return values in appsvc. 
  */
@@ -1014,6 +1016,8 @@ int appsvc_set_launch_mode(bundle *b, const char *mode);
  *
  */
 const char *appsvc_get_launch_mode(bundle *b);
+
+int aul_svc_subscribe_launch_result(bundle *b, const char *event);
 #ifdef __cplusplus
 	}
 #endif
