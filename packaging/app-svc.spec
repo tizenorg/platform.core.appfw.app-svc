@@ -30,6 +30,7 @@ BuildRequires:      pkgconfig(libsoup-2.4)
 BuildRequires:      pkgconfig(iniparser)
 BuildRequires:      pkgconfig(pkgmgr-info)
 BuildRequires:      pkgconfig(libtzplatform-config)
+BuildRequires:      pkgconfig(sqlite3)
 
 
 %description

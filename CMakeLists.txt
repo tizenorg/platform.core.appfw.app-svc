@@ -22,26 +22,19 @@ MESSAGE("Build type: ${CMAKE_BUILD_TYPE}")
 # Set required packages
 INCLUDE(FindPkgConfig)
 
-SET(APPSVC_PKGS_CHECK_MODULES "dlog ecore libprivilege-control aul")
-SET(APPSVC_LIBPKGS_CHECK_MODULES "dlog bundle dbus-glib-1 xdgmime aul glib-2.0 ecore libsoup-2.4 iniparser pkgmgr-info libtzplatform-config")
+SET(APPSVC_LIBPKGS_CHECK_MODULES "dlog bundle dbus-glib-1 xdgmime aul glib-2.0 ecore libsoup-2.4 iniparser pkgmgr-info libtzplatform-config sqlite3")
 
 IF (with_x)
-pkg_check_modules(pkgs REQUIRED ${APPSVC_PKGS_CHECK_MODULES} x11)
 pkg_check_modules(libpkgs REQUIRED ${APPSVC_LIBPKGS_CHECK_MODULES} ecore-x)
 ENDIF(with_x)
 
 IF (with_wayland)
 ADD_DEFINITIONS("-DWAYLAND")
-pkg_check_modules(pkgs REQUIRED ${APPSVC_PKGS_CHECK_MODULES})
 pkg_check_modules(libpkgs REQUIRED ${APPSVC_LIBPKGS_CHECK_MODULES})
 ENDIF (with_wayland)
 
 FOREACH(flag ${libpkgs_CFLAGS})
 	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
-ENDFOREACH(flag)
-
-FOREACH(flag ${pkgs_CFLAGS})
-	SET(TEST_CFLAGS "${TEST_CFLAGS} ${flag}")
 ENDFOREACH(flag)
 
 # Compiler flags
