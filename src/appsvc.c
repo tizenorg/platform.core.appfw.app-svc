@@ -211,6 +211,9 @@ static int __run_svc_with_pkgname(char *pkgname, bundle *b, int request_code, ap
 			case AUL_R_EINVAL:
 				ret = APPSVC_RET_EINVAL;
 				break;
+			case AUL_R_ENOAPP:
+				ret = APPSVC_RET_ENOMATCH;
+				break;
 			default:
 				ret = APPSVC_RET_ELAUNCH;
 		}
