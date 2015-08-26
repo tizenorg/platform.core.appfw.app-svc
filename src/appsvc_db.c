@@ -160,7 +160,7 @@ static int __init(uid_t uid)
 		return 0;
 	}
 
-	rc = sqlite3_open_v2(getUserSvcDB(uid), &svc_db, SQLITE_OPEN_READONLY, NULL);
+	rc = sqlite3_open_v2(getUserSvcDB(uid), &svc_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
 	if(rc) {
 		_E("Can't open database: %s", sqlite3_errmsg(svc_db));
 		goto err;
