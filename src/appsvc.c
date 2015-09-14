@@ -77,6 +77,9 @@ typedef struct _appsvc_resolve_info_t{
 extern int aul_launch_app_with_result(const char *pkgname, bundle *kb,
 			       void (*cbfunc) (bundle *, int, void *),
 			       void *data);
+extern int aul_launch_app_with_result_for_uid(const char *pkgname, bundle *kb,
+			       void (*cbfunc) (bundle *, int, void *),
+			       void *data, uid_t uid);
 
 static appsvc_cb_info_t *__create_rescb(int request_code, appsvc_res_fn cbfunc,
 					void *data);
@@ -84,7 +87,7 @@ static void __remove_rescb(appsvc_cb_info_t *info);
 static int __set_bundle(bundle *b, const char *key, const char *value);
 static void __aul_cb(bundle *b, int is_cancel, void *data);
 static int __run_svc_with_pkgname(char *pkgname, bundle *b, int request_code,
-				  appsvc_res_fn cbfunc, void *data);
+				  appsvc_res_fn cbfunc, void *data, uid_t uid);
 static int __get_resolve_info(bundle *b, appsvc_resolve_info_t *info);
 static int __free_resolve_info_data(appsvc_resolve_info_t *info);
 static int __get_list_with_condition(char *op, char *uri,
@@ -188,19 +191,25 @@ static void __aul_cb(bundle *b, int is_cancel, void *data)
 	return;
 }
 
-static int __run_svc_with_pkgname(char *pkgname, bundle *b, int request_code, appsvc_res_fn cbfunc, void *data)
+static int __run_svc_with_pkgname(char *pkgname, bundle *b, int request_code, appsvc_res_fn cbfunc, void *data, uid_t uid)
 {
 	appsvc_cb_info_t *cb_info = NULL;
 	int ret = -1;
-	
+
 	if (cbfunc) {
 		_D("pkg_name : %s - with result", pkgname);
 
 		cb_info = __create_rescb(request_code, cbfunc, data);
-		ret = aul_launch_app_with_result(pkgname, b, __aul_cb, cb_info);
+		if (getuid() == uid)
+			ret = aul_launch_app_with_result(pkgname, b, __aul_cb, cb_info);
+		else
+			ret = aul_launch_app_with_result_for_uid(pkgname, b, __aul_cb, cb_info, uid);
 	} else {
 		_D("pkg_name : %s - no result", pkgname);
-		ret = aul_launch_app(pkgname, b);
+		if (getuid() == uid)
+			ret = aul_launch_app(pkgname, b);
+		else
+			ret = aul_launch_app_for_uid(pkgname, b, uid);
 	}
 
 	if(ret < 0) {
@@ -654,7 +663,7 @@ SLPAPI int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbf
 	if(pkgname) {
 		if(appsvc_get_operation(b) == NULL)
 			appsvc_set_operation(b,APPSVC_OPERATION_DEFAULT);
-		ret = __run_svc_with_pkgname(pkgname, b, request_code, cbfunc, data);
+		ret = __run_svc_with_pkgname(pkgname, b, request_code, cbfunc, data, uid);
 		return ret;
 	}
 
@@ -696,12 +705,12 @@ SLPAPI int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbf
 			if(pkg_count == 1){
 				pkgname = (char *)pkg_list->data;
 				if(pkgname != NULL){
-					ret = __run_svc_with_pkgname(pkgname, b, request_code, cbfunc, data);
+					ret = __run_svc_with_pkgname(pkgname, b, request_code, cbfunc, data, uid);
 					goto end;
 				}
 			} else {
 				bundle_add(b, APP_SVC_K_URI_R_INFO, info.uri);
-				ret = __run_svc_with_pkgname(APP_SELECTOR, b, request_code, cbfunc, data);
+				ret = __run_svc_with_pkgname(APP_SELECTOR, b, request_code, cbfunc, data, uid);
 				goto end;
 			}
 			for (iter = pkg_list; iter != NULL; iter = g_slist_next(iter)) {
@@ -712,7 +721,7 @@ SLPAPI int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbf
 			pkg_list = NULL;
 		}
 	} else {
-		ret = __run_svc_with_pkgname(pkgname, b, request_code, cbfunc, data);
+		ret = __run_svc_with_pkgname(pkgname, b, request_code, cbfunc, data, uid);
 		free(pkgname);
 		goto end;
 	}
@@ -744,12 +753,12 @@ SLPAPI int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbf
 				if(pkg_count == 1){
 					pkgname = (char *)pkg_list->data;
 					if(pkgname != NULL){
-						ret = __run_svc_with_pkgname(pkgname, b, request_code, cbfunc, data);
+						ret = __run_svc_with_pkgname(pkgname, b, request_code, cbfunc, data, uid);
 						goto end;
 					}
 				} else {
 					bundle_add(b, APP_SVC_K_URI_R_INFO, info.uri_r_info);
-					ret = __run_svc_with_pkgname(APP_SELECTOR, b, request_code, cbfunc, data);
+					ret = __run_svc_with_pkgname(APP_SELECTOR, b, request_code, cbfunc, data, uid);
 					goto end;
 				}
 			}
@@ -760,7 +769,7 @@ SLPAPI int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbf
 			g_slist_free(pkg_list);
 			pkg_list = NULL;
 		}  else {
-			ret = __run_svc_with_pkgname(pkgname, b, request_code, cbfunc, data);
+			ret = __run_svc_with_pkgname(pkgname, b, request_code, cbfunc, data, uid);
 			free(pkgname);
 			goto end;
 		}
@@ -788,14 +797,14 @@ SLPAPI int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbf
 		if(pkg_count == 1){
 			pkgname = (char *)pkg_list->data;
 			if(pkgname != NULL){
-				ret = __run_svc_with_pkgname(pkgname, b, request_code, cbfunc, data);
+				ret = __run_svc_with_pkgname(pkgname, b, request_code, cbfunc, data, uid);
 			}
 		} else if(pkg_count < 1) {
 			__free_resolve_info_data(&info);
 			return APPSVC_RET_ENOMATCH;
 		} else {
 			bundle_add(b, APP_SVC_K_URI_R_INFO, info.scheme);
-			ret = __run_svc_with_pkgname(APP_SELECTOR, b, request_code, cbfunc, data);
+			ret = __run_svc_with_pkgname(APP_SELECTOR, b, request_code, cbfunc, data, uid);
 		}
 
 		for (iter = pkg_list; iter != NULL; iter = g_slist_next(iter)) {
@@ -804,7 +813,7 @@ SLPAPI int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbf
 		}
 		g_slist_free(pkg_list);	
 	} else {
-		ret = __run_svc_with_pkgname(pkgname, b, request_code, cbfunc, data);
+		ret = __run_svc_with_pkgname(pkgname, b, request_code, cbfunc, data, uid);
 		free(pkgname);
 	}
 
