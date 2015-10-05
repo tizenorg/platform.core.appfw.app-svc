@@ -47,7 +47,6 @@
 
 
 #include <bundle.h>
-#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,16 +80,14 @@ extern "C" {
 /** APP_SVC OPERATION TYPE*/
 #define APPSVC_OPERATION_MULTI_SHARE	"http://tizen.org/appcontrol/operation/multi_share"
 /** APP_SVC OPERATION TYPE*/
-#define APPSVC_OPERATION_COMPOSE		"http://tizen.org/appcontrol/opeation/compose"
+#define APPSVC_OPERATION_COMPOSE		"http://tizen.org/appcontrol/operation/compose"
 /** APP_SVC OPERATION TYPE*/
 #define APPSVC_OPERATION_LOCATION		"http://tizen.org/appcontrol/operation/configure/location"
 /** APP_SVC OPERATION TYPE*/
 #define APPSVC_OPERATION_FONT_TYPE		"http://tizen.org/appcontrol/operation/configure/font/type"
 /** APP_SVC OPERATION TYPE*/
 #define APPSVC_OPERATION_FONT_SIZE		"http://tizen.org/appcontrol/operation/configure/font/size"
-/** APP_SVC OPERATION TYPE*/
-#define APPSVC_OPERATION_LAUNCH_ON_EVENT       "http://tizen.org/appcontrol/operation/launch_on_event"
-
+#define APPSVC_OPERATION_LAUNCH_ON_EVENT	"http://tizen.org/appcontrol/operation/launch_on_event"
 
 
 
@@ -121,14 +118,29 @@ extern "C" {
 /** APP SVC internal private key */
 #define APP_SVC_K_URI_R_INFO		"__APP_SVC_URI_R_INFO__"
 
+#define APP_SVC_K_SELECTOR_EXTRA_LIST	"http://tizen.org/appcontrol/data/selector_extra_list"
+
+#ifdef _APPFW_FEATURE_MULTI_INSTANCE
+#define APP_SVC_K_MULTI_INSTANCE	"multi_instance"
+#endif
+
 #define APP_SELECTOR "org.tizen.app-selector"
 
 #define APPSVC_K_LAUNCH_RESULT_APP_STARTED "__K_LAUNCH_RESULT_APP_STARTED__"
 
+/** Internal operation for launching application which is other zone */
+#define APP_SVC_OPERATION_JUMP	"http://tizen.org/appcontrol/operation/jump"
+#define APP_SVC_K_JUMP_ZONE_NAME	"__K_JUMP_DOMAIN_NAME__"
+#define APP_SVC_K_JUMP_ORIGIN_OPERATION	"__K_JUMP_ORIGIN_OPERATION__"
+#define APP_SVC_K_FOCUS_ZONE "__K_FOCUS_ZONE__"
+
+
 /**
- * @brief Return values in appsvc. 
+ * @brief Return values in appsvc.
  */
 typedef enum _appsvc_return_val {
+	APPSVC_RET_EREJECTED = -7,	/**< application launch rejected */
+	APPSVC_RET_ETERMINATING = -6,	/**< application terminating */
 	APPSVC_RET_EILLACC = -5,		/**< Illegal Access */
 	APPSVC_RET_ELAUNCH = -4,		/**< Failure on launching the app */
 	APPSVC_RET_ENOMATCH = -3,		/**< No matching result Error */
@@ -139,7 +151,7 @@ typedef enum _appsvc_return_val {
 
 
 /**
- * @brief result values in appsvc. 
+ * @brief result values in appsvc.
  */
 typedef enum _appsvc_result_val {
 	APPSVC_RES_CANCEL = -2,		/**< Cancel by system */
@@ -148,20 +160,20 @@ typedef enum _appsvc_result_val {
 }appsvc_result_val;
 
 
-/** 
+/**
  * @brief appsvc_res_fn is appsvc result function
- * @param[out]	b   		result bundle	
+ * @param[out]	b   		result bundle
  * @param[out]	request_code   	request code
  * @param[out]	result   		result value
- * @param[out]	data		user-supplied data	
+ * @param[out]	data		user-supplied data
 */
 typedef void (*appsvc_res_fn)(bundle *b, int request_code, appsvc_result_val result, void *data);
 
 
-/** 
- * @brief iterator function running with appsvc_get_list 
- * @param[out]	pkg_name	package name retreived by appsvc_get_list
- * @param[out]	data		user-supplied data	
+/**
+ * @brief iterator function running with appsvc_get_list
+ * @param[out]	appid		appid retreived by appsvc_get_list
+ * @param[out]	data		user-supplied data
 */
 typedef int (*appsvc_info_iter_fn)(const char *appid, void *data);
 
@@ -171,18 +183,18 @@ typedef int (*appsvc_host_res_fn)(void *data);
  * @par Description:
  * This function sets an operation to launch application based on appsvc.
  *
- * @param[in] b bundle object 
- * @param[in] operation operation 
+ * @param[in] b bundle object
+ * @param[in] operation operation
  *
  * @return 0 if success, negative value(<0) if fail
  * @retval APPSVC_RET_OK - success
- * @retval APPSVC_RET_ERROR - general error 
+ * @retval APPSVC_RET_ERROR - general error
  * @retval APPSVC_RET_EINVAL - invalid argument(content)
  *
  * @pre None.
  * @post None.
  * @see None.
- * @remarks An application must call this function before using appsvc_run_service API. 
+ * @remarks An application must call this function before using appsvc_run_service API.
  *
  * @par Sample code:
  * @code
@@ -193,7 +205,7 @@ typedef int (*appsvc_host_res_fn)(void *data);
 	bundle *b = NULL;
 
 	b = bundle_create();
-	
+
 	appsvc_set_operation(b, APPSVC_OPERATION_VIEW);
 }
  * @endcode
@@ -205,18 +217,18 @@ int appsvc_set_operation(bundle *b, const char *operation);
  * @par Description:
  * This function sets an uri to launch application based on appsvc.
  *
- * @param[in] b bundle object 
- * @param[in] uri uri 
+ * @param[in] b bundle object
+ * @param[in] uri uri
  *
  * @return 0 if success, negative value(<0) if fail
  * @retval APPSVC_RET_OK - success
- * @retval APPSVC_RET_ERROR - general error 
+ * @retval APPSVC_RET_ERROR - general error
  * @retval APPSVC_RET_EINVAL - invalid argument(content)
  *
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -227,7 +239,7 @@ int appsvc_set_operation(bundle *b, const char *operation);
 	bundle *b = NULL;
 
 	b = bundle_create();
-	
+
 	appsvc_set_operation(b, APPSVC_OPERATION_VIEW);
 	appsvc_set_uri(b,"http://www.samsung.com");
 }
@@ -240,18 +252,18 @@ int appsvc_set_uri(bundle *b, const char *uri);
  * @par Description:
  * This function sets a mime-type to launch application based on appsvc.
  *
- * @param[in] b bundle object 
- * @param[in] mime mime-type 
+ * @param[in] b bundle object
+ * @param[in] mime mime-type
  *
  * @return 0 if success, negative value(<0) if fail
  * @retval APPSVC_RET_OK - success
- * @retval APPSVC_RET_ERROR - general error 
+ * @retval APPSVC_RET_ERROR - general error
  * @retval APPSVC_RET_EINVAL - invalid argument(content)
  *
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -262,7 +274,7 @@ int appsvc_set_uri(bundle *b, const char *uri);
 	bundle *b = NULL;
 
 	b = bundle_create();
-	
+
 	appsvc_set_operation(b, APPSVC_OPERATION_PICK);
 	appsvc_set_mime(b,"image/jpg");
 }
@@ -275,16 +287,16 @@ int appsvc_set_mime(bundle *b, const char *mime);
  * @par Description:
  * This function sets an extra data to launch application based on appsvc.
  *
- * @param[in] b bundle object 
- * @param[in] key key of extra data 
- * @param[in] val data 
+ * @param[in] b bundle object
+ * @param[in] key key of extra data
+ * @param[in] val data
  *
  * @return 0 if success, negative value(<0) if fail
  *
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -295,7 +307,7 @@ int appsvc_set_mime(bundle *b, const char *mime);
 	bundle *b = NULL;
 
 	b = bundle_create();
-	
+
 	appsvc_set_operation(b, APPSVC_OPERATION_SEND);
 	appsvc_set_uri(b,"mailto:xxx1@xxx");
 	appsvc_add_data(b,APPSVC_DATA_CC,"xxx2@xxx");
@@ -309,9 +321,9 @@ int appsvc_add_data(bundle *b, const char *key, const char *val);
  * @par Description:
  * This function sets an extra array data to launch application based on appsvc.
  *
- * @param[in] b bundle object 
- * @param[in] key key of extra data 
- * @param[in] val_array data 
+ * @param[in] b bundle object
+ * @param[in] key key of extra data
+ * @param[in] val_array data
  * @param[in] len Length of array
  *
  * @return 0 if success, negative value(<0) if fail
@@ -319,7 +331,7 @@ int appsvc_add_data(bundle *b, const char *key, const char *val);
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -344,18 +356,18 @@ int appsvc_add_data_array(bundle *b, const char *key, const char **val_array, in
  * @par Description:
  * This function sets a package name to launch application based on appsvc.
  *
- * @param[in] b bundle object 
+ * @param[in] b bundle object
  * @param[in] pkg_name package name for explict launch
  *
  * @return 0 if success, negative value(<0) if fail
  * @retval APPSVC_RET_OK - success
- * @retval APPSVC_RET_ERROR - general error 
+ * @retval APPSVC_RET_ERROR - general error
  * @retval APPSVC_RET_EINVAL - invalid argument(content)
  *
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -366,7 +378,7 @@ int appsvc_add_data_array(bundle *b, const char *key, const char **val_array, in
 	bundle *b = NULL;
 
 	b = bundle_create();
-	
+
 	appsvc_set_operation(b, APPSVC_OPERATION_PICK);
 	appsvc_set_mime(b,"image/jpg");
 	appsvc_set_pkgname(b, "org.tizen.mygallery");
@@ -461,15 +473,15 @@ int appsvc_set_category(bundle *b, const char *category);
  *
  * @return callee's pid if success, negative value(<0) if fail
  * @retval callee's pid - success
- * @retval APPSVC_RET_ERROR - general error 
+ * @retval APPSVC_RET_ERROR - general error
  * @retval APPSVC_RET_EINVAL - invalid argument(content)
- * @retval APPSVC_RET_ENOMATCH - no matching result Error 
+ * @retval APPSVC_RET_ENOMATCH - no matching result Error
  * @retval APPSVC_RET_ELAUNCH - failure on launching the app
  *
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -481,7 +493,7 @@ int appsvc_set_category(bundle *b, const char *category);
 	static int num = 0;
 
 	b = bundle_create();
-	
+
 	appsvc_set_operation(b, APPSVC_OPERATION_PICK);
 	appsvc_set_mime(b,"image/jpg");
 
@@ -504,21 +516,21 @@ int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc, vo
  * @return 0 if success, negative value(<0) if fail
  * @retval APPSVC_RET_OK - success
  * @retval APPSVC_RET_EINVAL - invalid argument(content)
- * @retval APPSVC_RET_ENOMATCH - no matching result Error 
+ * @retval APPSVC_RET_ENOMATCH - no matching result Error
  *
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
 #include <appsvc.h>
 
-static int iter_fn(const char* pkg_name, void *data)
+static int iter_fn(const char* appid, void *data)
 {
 	printf("\t==========================\n");
- 	printf("\t pkg_name: %s\n", pkg_name);
+ 	printf("\t appid: %s\n", appid);
  	printf("\t==========================\n");
  	return 0;
 }
@@ -529,7 +541,7 @@ static int iter_fn(const char* pkg_name, void *data)
 	static int num = 0;
 
 	b = bundle_create();
-	
+
 	appsvc_set_operation(b, APPSVC_OPERATION_PICK);
 	appsvc_set_mime(b,"image/jpg");
 
@@ -543,16 +555,54 @@ int appsvc_usr_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data, uid_
 
 /**
  * @par Description:
+ * This API use to get default applications
+ *
+ * @param[in] iter_fn iterator function
+ * @param[in] data user-supplied data for iter_fn
+ *
+ * @return 0 if success, negative value(<0) if fail
+ * @retval APPSVC_RET_OK - success
+ * @retval APPSVC_RET_EINVAL - invalid argument(content)
+ * @retval APPSVC_RET_ENOMATCH - no matching result Error
+ *
+ * @pre None.
+ * @post None.
+ * @see None.
+ * @remarks None.
+ *
+ * @par Sample code:
+ * @code
+#include <appsvc.h>
+
+static int iter_fn(const char* appid, void *data)
+{
+	printf("\t==========================\n");
+	printf("\t appid : %s\n", appid);
+	printf("\t==========================\n");
+	return 0;
+}
+
+...
+{
+	return appsvc_get_all_defapps(iter_fn, (void*)NULL);
+}
+ * @endcode
+ *
+ */
+int appsvc_get_all_defapps(appsvc_info_iter_fn iter_fn, void *data);
+
+/**
+ * @par Description:
  * This function gets a operation from bundle.
  *
- * @param[in] b bundle object 
+ * @param[in] b bundle object
  *
  * @return Pointer for operation string if success, NULL if fail
  *
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -560,7 +610,7 @@ int appsvc_usr_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data, uid_
 
 ...
 {
-	char *val;	
+	char *val;
 	val = appsvc_get_operation(b);
 }
  * @endcode
@@ -572,14 +622,14 @@ const char *appsvc_get_operation(bundle *b);
  * @par Description:
  * This function gets a uri from bundle.
  *
- * @param[in] b bundle object 
+ * @param[in] b bundle object
  *
  * @return Pointer for uri string if success, NULL if fail
  *
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -587,7 +637,7 @@ const char *appsvc_get_operation(bundle *b);
 
 ...
 {
-	char *val;	
+	char *val;
 	val = appsvc_get_uri(b);
 }
  * @endcode
@@ -599,14 +649,14 @@ const char *appsvc_get_uri(bundle *b);
  * @par Description:
  * This function gets a mime-type from bundle.
  *
- * @param[in] b bundle object 
+ * @param[in] b bundle object
  *
  * @return Pointer for mime-type string if success, NULL if fail
  *
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -614,7 +664,7 @@ const char *appsvc_get_uri(bundle *b);
 
 ...
 {
-	char *val;	
+	char *val;
 	val = appsvc_get_mime(b);
 }
  * @endcode
@@ -626,14 +676,14 @@ const char *appsvc_get_mime(bundle *b);
  * @par Description:
  * This function gets a package name from bundle.
  *
- * @param[in] b bundle object 
+ * @param[in] b bundle object
  *
  * @return Pointer for package name string if success, NULL if fail
  *
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -641,7 +691,7 @@ const char *appsvc_get_mime(bundle *b);
 
 ...
 {
-	char *val;	
+	char *val;
 	val = appsvc_get_pkgname(b);
 }
  * @endcode
@@ -708,7 +758,7 @@ const char *appsvc_get_category(bundle *b);
  * @par Description:
  * This function gets value from key.
  *
- * @param[in] b bundle object 
+ * @param[in] b bundle object
  * @param[in] key key
  *
  * @return Pointer for value string if success, NULL if fail
@@ -716,7 +766,7 @@ const char *appsvc_get_category(bundle *b);
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -724,7 +774,7 @@ const char *appsvc_get_category(bundle *b);
 
 ...
 {
-	char *val;	
+	char *val;
 	val = appsvc_get_data(b, APPSVC_DATA_CC);
 }
  * @endcode
@@ -736,7 +786,7 @@ const char *appsvc_get_data(bundle *b, const char *key);
  * @par Description:
  * This function gets value from key.
  *
- * @param[in] b bundle object 
+ * @param[in] b bundle object
  * @param[in] key key
  * @param[out] len length of array
  *
@@ -745,7 +795,7 @@ const char *appsvc_get_data(bundle *b, const char *key);
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -753,13 +803,13 @@ const char *appsvc_get_data(bundle *b, const char *key);
 
 ...
 {
-	char **val_array;	
+	char **val_array;
 	int len;
 	char *val;
 
 	if(appsvc_data_is_array(b, APPSVC_DATA_SELECTED))
 		val_array = appsvc_get_data_array(b, APPSVC_DATA_SELECTED, &len);
-	else 
+	else
 		val = appsvc_get_data(b, APPSVC_DATA_SELECTED);
 }
  * @endcode
@@ -771,17 +821,17 @@ const char **appsvc_get_data_array(bundle *b, const char *key, int *len);
  * @par Description:
  * This API create appsvc result bundle based on bundle received in reset event.
  *
- * @param[in] inb bundle received in reset event 
- * @param[in] outb bundle to use for returning result 
+ * @param[in] inb bundle received in reset event
+ * @param[in] outb bundle to use for returning result
  *
  * @retval APPSVC_RET_OK - success
- * @retval APPSVC_RET_ERROR - general error 
+ * @retval APPSVC_RET_ERROR - general error
  * @retval APPSVC_RET_EINVAL - invalid argument(content)
  *
  * @pre None.
  * @post None.
  * @see appsvc_send_result.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -791,7 +841,7 @@ const char **appsvc_get_data_array(bundle *b, const char *key, int *len);
 {
 	struct appdata *ad = data;
 	bundle* res_bundle;
-	
+
 	appsvc_create_result_bundle(ad->b,&res_bundle);
 	bundle_add(res_bundle, "result", "1");
 	appsvc_send_result(res_bundle, 0);
@@ -809,13 +859,13 @@ int appsvc_create_result_bundle(bundle *inb, bundle **outb);
  * @param[in] result result value
  *
  * @retval APPSVC_RET_OK - success
- * @retval APPSVC_RET_ERROR - general error 
+ * @retval APPSVC_RET_ERROR - general error
  * @retval APPSVC_RET_EINVAL - invalid argument(content)
  *
  * @pre appsvc_create_result_bundle.
  * @post None.
  * @see appsvc_send_result.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -825,7 +875,7 @@ int appsvc_create_result_bundle(bundle *inb, bundle **outb);
 {
 	struct appdata *ad = data;
 	bundle* res_bundle;
-	
+
 	appsvc_create_result_bundle(ad->b,&res_bundle);
 	bundle_add(res_bundle, "result", "1");
 	appsvc_send_result(res_bundle, 0);
@@ -845,13 +895,13 @@ int appsvc_send_result(bundle *b, appsvc_result_val result);
  * @param[in] defapp 	default application
  *
  * @retval APPSVC_RET_OK - success
- * @retval APPSVC_RET_ERROR - general error 
+ * @retval APPSVC_RET_ERROR - general error
  * @retval APPSVC_RET_EINVAL - invalid argument(content)
  *
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -874,12 +924,12 @@ int appsvc_set_defapp(const char *op, const char *mime_type, const char *uri,
  * @param[in] defapp 	default application
  *
  * @retval APPSVC_RET_OK - success
- * @retval APPSVC_RET_ERROR - general error 
+ * @retval APPSVC_RET_ERROR - general error
  *
  * @pre None.
  * @post None.
  * @see None.
- * @remarks None. 
+ * @remarks None.
  *
  * @par Sample code:
  * @code
@@ -896,9 +946,35 @@ int appsvc_unset_defapp(const char *defapp, uid_t uid);
 
 /**
  * @par Description:
+ * This API unset all of default applications associated with op, uri and mime-type.
+ *
+ *
+ * @retval APPSVC_RET_OK - success
+ * @retval APPSVC_RET_ERROR - general error
+ *
+ * @pre None.
+ * @post None.
+ * @see None.
+ * @remarks None.
+ *
+ * @par Sample code:
+ * @code
+#include <appsvc.h>
+
+...
+{
+	appsvc_unset_all_defapps();
+}
+ * @endcode
+ *
+ */
+int appsvc_unset_all_defapps();
+
+/**
+ * @par Description:
  *	This API ask a application is default application or not.
  *
- * @param[in]	pkg_name	application package name
+ * @param[in]	appid	application appid
  * @return	true / false
  * @retval	1	app_name is default application in appsvc.
  * @retval	0	app_name is NOT default application in appsvc.
@@ -906,32 +982,33 @@ int appsvc_unset_defapp(const char *defapp, uid_t uid);
   * @pre None.
   * @post None.
   * @see None.
-  * @remarks None. 
+  * @remarks None.
   *
   * @par Sample code:
   * @code
 #include <appsvc.h>
- 
+
  ...
 
  * int is_defapp_browser_app()
- * { 
+ * {
  *      return appsvc_is_defapp("org.tizen.browser");
  * }
  *
  * @endcode
  * @remark
  *	None
-* 
+*
 */
 int appsvc_is_defapp(const char *appid, uid_t uid);
+
 
 /**
  * @par Description:
  *	This API ask a extra data is array or not.
  *
- * @param[in] b bundle object 
- * @param[in] key key of extra data 
+ * @param[in] b bundle object
+ * @param[in] key key of extra data
  * @return	true / false
  * @retval	1	a extra data is array.
  * @retval	0	a extra data is not array.
@@ -939,12 +1016,12 @@ int appsvc_is_defapp(const char *appid, uid_t uid);
   * @pre None.
   * @post None.
   * @see None.
-  * @remarks None. 
+  * @remarks None.
   *
   * @par Sample code:
   * @code
 #include <appsvc.h>
- 
+
  ...
 
  * int appsvc_data_is_array(bundle *b, char *key)
@@ -955,7 +1032,7 @@ int appsvc_is_defapp(const char *appid, uid_t uid);
  * @endcode
  * @remark
  *	None
-* 
+*
 */
 int appsvc_data_is_array(bundle *b, const char *key);
 
@@ -1016,8 +1093,6 @@ int appsvc_set_launch_mode(bundle *b, const char *mode);
  *
  */
 const char *appsvc_get_launch_mode(bundle *b);
-
-int aul_svc_subscribe_launch_result(bundle *b, const char *event);
 #ifdef __cplusplus
 	}
 #endif
