@@ -18,11 +18,10 @@ IF("${CMAKE_BUILD_TYPE}" STREQUAL "")
 ENDIF()
 MESSAGE("Build type: ${CMAKE_BUILD_TYPE}")
 
-
 # Set required packages
 INCLUDE(FindPkgConfig)
 
-SET(APPSVC_LIBPKGS_CHECK_MODULES "dlog bundle dbus-glib-1 xdgmime aul glib-2.0 ecore libsoup-2.4 iniparser pkgmgr-info libtzplatform-config sqlite3")
+SET(APPSVC_LIBPKGS_CHECK_MODULES "dlog bundle aul ecore")
 
 IF (with_x)
 pkg_check_modules(libpkgs REQUIRED ${APPSVC_LIBPKGS_CHECK_MODULES} ecore-x)
@@ -49,7 +48,6 @@ SET(CMAKE_C_FLAGS_RELEASE "-O2")
 SET(CMAKE_SKIP_BUILD_RPATH true)
 
 # Get uname value to set 'TARGET' definition 
-# TODO: Is this needed?
 FIND_PROGRAM(UNAME NAMES uname)
 EXEC_PROGRAM("${UNAME}" ARGS "-m" OUTPUT_VARIABLE "ARCH")
 IF("${ARCH}" STREQUAL "arm")
@@ -63,16 +61,12 @@ ADD_DEFINITIONS("-DRW_DATA_PREFIX=\"/opt/share\"")
 # Linker flags
 SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed")
 
-
 ### Build ###
-
-
 # aul
 add_library(appsvc SHARED
 		src/appsvc.c
-		src/appsvc_db.c
 		)
-target_link_libraries(appsvc ${libpkgs_LDFLAGS})
+TARGET_LINK_LIBRARIES(appsvc ${libpkgs_LDFLAGS})
 SET_TARGET_PROPERTIES(appsvc PROPERTIES SOVERSION ${VERSION_MAJOR})
 SET_TARGET_PROPERTIES(appsvc PROPERTIES VERSION ${VERSION})
 

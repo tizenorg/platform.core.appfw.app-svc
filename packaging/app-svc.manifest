@@ -2,7 +2,4 @@
  <request>
     <domain name="_"/>
  </request>
- <assign>
-    <filesystem path="TZ_SYS_DB/.appsvc.db*" label="User" />
- </assign>
 </manifest>
