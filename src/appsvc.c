@@ -83,7 +83,7 @@ SLPAPI int appsvc_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc,
 
 SLPAPI int appsvc_usr_run_service(bundle *b, int request_code, appsvc_res_fn cbfunc, void *data, uid_t uid)
 {
-	return aul_svc_run_service_with_uid(b, request_code, (aul_svc_res_fn)cbfunc, data, uid);
+	return aul_svc_run_service_for_uid(b, request_code, (aul_svc_res_fn)cbfunc, data, uid);
 }
 
 SLPAPI int appsvc_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data)
@@ -93,7 +93,7 @@ SLPAPI int appsvc_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data)
 
 SLPAPI int appsvc_usr_get_list(bundle *b, appsvc_info_iter_fn iter_fn, void *data, uid_t uid)
 {
-	return aul_svc_get_list_with_uid(b, (aul_svc_info_iter_fn)iter_fn, data, uid);
+	return aul_svc_get_list_for_uid(b, (aul_svc_info_iter_fn)iter_fn, data, uid);
 }
 
 SLPAPI int appsvc_get_all_defapps(appsvc_info_iter_fn iter_fn, void *data)
@@ -159,12 +159,12 @@ SLPAPI int appsvc_send_result(bundle *b, appsvc_result_val result)
 SLPAPI int appsvc_set_defapp(const char *op, const char *mime_type, const char *uri,
 					const char *defapp, uid_t uid)
 {
-	return aul_svc_set_defapp_with_uid(op, mime_type, uri, defapp, uid);
+	return aul_svc_set_defapp_for_uid(op, mime_type, uri, defapp, uid);
 }
 
 SLPAPI int appsvc_unset_defapp(const char *defapp, uid_t uid)
 {
-	return aul_svc_unset_defapp_with_uid(defapp, uid);
+	return aul_svc_unset_defapp_for_uid(defapp, uid);
 }
 
 SLPAPI int appsvc_unset_all_defapps()
@@ -174,7 +174,7 @@ SLPAPI int appsvc_unset_all_defapps()
 
 SLPAPI int appsvc_is_defapp(const char *pkg_name, uid_t uid)
 {
-	return aul_svc_is_defapp_with_uid(pkg_name, uid);
+	return aul_svc_is_defapp_for_uid(pkg_name, uid);
 }
 
 SLPAPI int appsvc_data_is_array(bundle *b, const char *key)
