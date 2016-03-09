@@ -339,7 +339,7 @@ int appsvc_add_data(bundle *b, const char *key, const char *val);
 ...
 {
 	bundle *b = NULL;
-	char *images[] = {"/opt/media/a.jpg", "/opt/media/b.jpg", "/opt/media/c.jpg"};
+	char *images[] = {"/tmp/a.jpg", "/tmp/b.jpg", "/tmp/c.jpg"};
 
 	b = bundle_create();
 
