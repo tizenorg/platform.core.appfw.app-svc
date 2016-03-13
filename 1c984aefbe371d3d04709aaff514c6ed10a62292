@@ -17,6 +17,14 @@ Branch: refs/heads/tizen
 Code-Review+2: Semun Lee <sm79.lee@samsung.com>
 Verified+1: Jiwoong Im <jiwoong.im@samsung.com>
 Submitted-by: Jiwoong Im <jiwoong.im@samsung.com>
+Submitted-at: Wed, 09 Mar 2016 02:55:39 -0700
+Reviewed-on: https://review.tizen.org/gerrit/61596
+Project: platform/core/appfw/app-svc
+Branch: refs/heads/tizen
+
+Code-Review+2: Semun Lee <sm79.lee@samsung.com>
+Verified+1: Jiwoong Im <jiwoong.im@samsung.com>
+Submitted-by: Jiwoong Im <jiwoong.im@samsung.com>
 Submitted-at: Wed, 09 Mar 2016 01:55:39 -0800
 Reviewed-on: https://review.tizen.org/gerrit/61596
 Project: platform/core/appfw/app-svc
